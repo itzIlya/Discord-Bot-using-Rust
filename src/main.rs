@@ -2,6 +2,7 @@
 #![allow(unused_imports)]
 use std::ascii::escape_default;
 use serenity::prelude::*;
+use serenity::model::guild::Member;
 use serenity::utils::MessageBuilder;
 
 // additional uses:
@@ -58,7 +59,9 @@ lazy_static! {
         initial_values.extend(["shit", "fuck","ass"].iter().map(|&s| s.to_string()));
         RwLock::new(initial_values)
     };
+    static ref ABOUT_TEXT: RwLock<String> = RwLock::new(String::from("Bot created by ilya"));
 }
+
 
 struct Handler;
 
@@ -67,12 +70,25 @@ impl EventHandler for Handler {
     async fn ready(&self, _: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
     }
-    // Set a handler for the `message` event - so that whenever a new message is received - the
-    // closure (or function) passed will be called.
-    //
-    // Event handlers are dispatched through a threadpool, and so multiple events can be dispatched
-    // simultaneously.
-    /*
+
+    async fn guild_member_addition(&self, ctx: Context, new_member: Member) {
+        println!("New member joined : {}", new_member.user.name);
+        // This is an unsafe approach. Would be better to handle the unwrap using matchin. Ik. I'm lazy af. 
+        // Let's hope channel_id is always something meaningful #_#
+        let channel_id= new_member.default_channel(&ctx.cache).unwrap().id;
+        let welcome_message = MessageBuilder::new()
+            .push("welcome ")
+            .mention(&new_member)
+            .push("!")
+            .push("I'm the welcome bot. If you have any questions about the server or the channel or want to learn more about the commands, use ~help.")
+            .build();
+        
+        // Not checking the result...
+        // Don't really care if .say() works or not... 
+        // It probably does, unless the bot isn't running. I guess we'll eventually find out.
+        let _ = channel_id.say(&ctx.http,&welcome_message).await;
+    }
+    /* 
     async fn message(&self, ctx: Context, msg: Message) {
 
         if msg.content == "!ping" {
@@ -105,49 +121,18 @@ impl EventHandler for Handler {
 
 #[group]
 //#[commands(about, am_i_admin, say, commands, ping, latency, some_long_command, upper_command)]
-#[commands(about,commands,remove_member)]
+#[commands(about,update_about,commands,remove_member)]
 struct General;
-/*
-#[group]
-// Sets multiple prefixes for a group.
-// This requires us to call commands in this group via `~emoji` (or `~em`) instead of just `~`.
-#[prefixes("emoji", "em")]
-// Set a description to appear if a user wants to display a single group e.g. via help using the
-// group-name or one of its prefixes.
-#[description = "A group with commands providing an emoji as response."]
-// Summary only appears when listing multiple groups.
-#[summary = "Do emoji fun!"]
-// Sets a command that will be executed if only a group-prefix was passed.
-#[default_command(bird)]
-#[commands(cat, dog)]
-struct Emoji;
 
-#[group]
-// Sets a single prefix for this group.
-// So one has to call commands in this group via `~math` instead of just `~`.
-#[prefix = "math"]
-#[commands(multiply)]
-struct Math;
 
-#[group]
-#[owners_only]
-// Limit all commands to be guild-restricted.
-#[only_in(guilds)]
-// Summary only appears when listing multiple groups.
-#[summary = "Commands for server owners"]
-#[commands(slow_mode)]
-struct Owner;
-*/
-// The framework provides two built-in help commands for you to use. But you can also make your own
-// customized help command that forwards to the behaviour of either of them.
 #[help]
 // This replaces the information that a user can pass a command-name as argument to gain specific
 // information about it.
 #[individual_command_tip = "Hello! こんにちは！Hola! Bonjour! 您好! 안녕하세요~\n\n\
 If you want more information about a specific command, just pass the command as argument."]
-// Some arguments require a `{}` in order to replace it with contextual information.
-// In this case our `{}` refers to a command's name.
 #[command_not_found_text = "Could not find: `{}`."]
+
+// Anything below is just some search related crap. Don't touch. Although, shit probably won't fall apart if you do.
 // Define the maximum Levenshtein-distance between a searched command-name and commands. If the
 // distance is lower than or equal the set distance, it will be displayed as a suggestion.
 // Setting the distance to 0 will disable suggestions.
@@ -366,15 +351,41 @@ async fn commands(ctx: &Context, msg: &Message) -> CommandResult {
 // here is a simple command to test bot functionality
 #[command]
 async fn about(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.channel_id.say(&ctx.http, "This is a small test-bot! : )").await?;
+    msg.channel_id.say(&ctx.http, ABOUT_TEXT.read().await.clone()).await?;
 
     Ok(())
 }
 
 #[command]
+async fn update_about(ctx: &Context, msg: &Message,args: Args) -> CommandResult {
+    let guild_id = match msg.guild_id {
+        Some(id) => id,
+        None => {
+            let _ = msg.reply(&ctx.http, "Command only available in server channels.").await?;
+            return Ok(());
+        }
+    };
+
+    if let Ok(member) = msg.member(&ctx).await {
+        if let Ok(perms) = member.permissions(&ctx.cache) {
+            if !perms.contains(Permissions::all()) {
+                let _ = msg.reply(&ctx.http, "You don't have permission to edit bot features").await?;
+                return Ok(());
+            }
+        }
+    }
+
+    let mut guard = ABOUT_TEXT.write().await;
+    *guard = String::from(format!("Bot made by itzIlya.\n{}",args.rest()));
+    let _ = msg.reply(&ctx.http, "successfully updated about").await?;
+    Ok(())
+}
+
+
+#[command]
 async fn remove_member(ctx: &Context, msg: &Message, args: Args) -> CommandResult{
-    println!("removing member");
-    let cache = ctx.cache.clone();
+    
+    
     let mut cloned_args = args.clone();
 
     let guild_id = match msg.guild_id {
