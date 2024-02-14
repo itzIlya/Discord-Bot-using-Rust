@@ -1,5 +1,3 @@
-# discordReadme
-
 # Language sensitive discord bot
 
 This is a relatively simple multithreaded discord bot program written entirely in rust using [Serenity](https://github.com/serenity-rs/serenity/tree/current) and [Tokio](https://github.com/tokio-rs/tokio). 
@@ -8,15 +6,15 @@ This is a relatively simple multithreaded discord bot program written entirely i
 
 ### Language checking
 
-    The bot checks every message that is sent to all the channels within a server for bad language. Using profanity in a message will cause the bot to reply to that message with a reminder to not use bad language in the channel. 
+The bot checks every message that is sent to all the channels within a server for bad language. Using profanity in a message will cause the bot to reply to that message with a reminder to not use bad language in the channel. 
 
 ### Welcome message
 
-    Each time a new member joins the server, depending on how they were invited, the bot will send out a welcome message to that member in one of the channels in the server.
+Each time a new member joins the server, depending on how they were invited, the bot will send out a welcome message to that member in one of the channels in the server.
 
 ### Commands
 
-    The bot supports the following commands:
+The bot supports the following commands:
 
 - `**~commands`  :** Shows the number of times members have attempted to use each command.
 - **`~help [optional:command_name]`**: Provides a guide for using the bot and sending out commands.
@@ -33,7 +31,7 @@ The bot will need certain permissions for the server. To grant those permissions
 
 ## About the bot
 
-    The bot is a multithreaded program that uses the Tokio framework to accomplish its multithreaded needs. Things that can be edited during runtime such as the about text for the server need to use locks to prevent multiple threads from accessing them at the same time (Lines 68-75 in src/main.rs). Accessing the shared variables also requires requesting for locks. The bot can handle multiple requests at the same time from a single server, However, it can not run multiple servers/shards at once. This feature may be added in the future as it does not require much change to structure of the code except for the main function and client initialization. Feel free to make these changes yourself if you need to. A guide to handling multiple shards is in the [following example of the serenity documentation](https://github.com/serenity-rs/serenity/blob/current/examples/e02_transparent_guild_sharding/src/main.rs).
+The bot is a multithreaded program that uses the Tokio framework to accomplish its multithreaded needs. Things that can be edited during runtime such as the about text for the server need to use locks to prevent multiple threads from accessing them at the same time (Lines 68-75 in src/main.rs). Accessing the shared variables also requires requesting for locks. The bot can handle multiple requests at the same time from a single server, However, it can not run multiple servers/shards at once. This feature may be added in the future as it does not require much change to structure of the code except for the main function and client initialization. Feel free to make these changes yourself if you need to. A guide to handling multiple shards is in the [following example of the serenity documentation](https://github.com/serenity-rs/serenity/blob/current/examples/e02_transparent_guild_sharding/src/main.rs).
 
 ## Purpose
 
