@@ -5,14 +5,27 @@ use serenity::prelude::*;
 use serenity::model::guild::Member;
 use serenity::utils::MessageBuilder;
 
+use tokio::fs::File;
+use tokio::io::{AsyncWriteExt, copy};
+
+
+//use tokio::fs::copy;
+//use std::io::copy;
+
+use image::io::Reader as ImageReader;
+use std::path::PathBuf;
+
 // additional uses:
  // We recommend migrating to poise, instead of using the standard command framework.
 use std::collections::{HashMap, HashSet};
-use std::env;
+use std::{env, result};
 use std::env::args;
 use std::fmt::Write;
+use std::path::Path;
 use std::sync::Arc;
 use lazy_static::lazy_static;
+use reqwest::header::CONTENT_TYPE;
+use serenity::all::{CreateAttachment, CreateMessage};
 
 use serenity::async_trait;
 use serenity::builder::EditChannel;
@@ -39,6 +52,7 @@ use serenity::model::id::UserId;
 use serenity::model::permissions::Permissions;
 use serenity::prelude::*;
 use serenity::utils::{content_safe, ContentSafeOptions};
+
 // end of additional uses
 struct ShardManagerContainer;
 
@@ -51,7 +65,7 @@ struct CommandCounter;
 impl TypeMapKey for CommandCounter {
     type Value = HashMap<String, u64>;
 }
-// This is a multi threaded application so we are using RwLock:
+// This is a multithreaded application, so we are using RwLock:
 // this allows multiple threads to read the list concurrently while acquiring a write lock for modifications.
 lazy_static! {
     static ref BAD_WORDS: RwLock<Vec<String>> = {
@@ -460,7 +474,7 @@ async fn remove_member(ctx: &Context, msg: &Message, args: Args) -> CommandResul
             return Ok(());
         }
     };
-
+    
     // Kick the member
     if let Err(why) = member.kick_with_reason(&ctx.http, &format!("Kicked by {}", msg.author.name)).await {
         println!("Error kicking user: {:?}", why);
@@ -472,3 +486,103 @@ async fn remove_member(ctx: &Context, msg: &Message, args: Args) -> CommandResul
 
     Ok(())
 }
+
+#[command]
+async fn get_image(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    // Send the image file as a message attachment
+    let file_name = String::from("file11");
+    let mut cloned_args = args.clone();
+    let url = match cloned_args.single_quoted::<String>() {
+        Ok(url) => {
+            println!("{}",url);
+            url
+        },
+        Err(_) => {
+            let _ = msg.reply(&ctx.http, "Please provide a valid url");
+            return Ok(());
+        }
+    };
+    println!("before call");
+    let result = download_image(&url,&file_name).await;
+    println!("after call");
+    match result {
+        Ok(bool)=> {
+            let attachment = CreateAttachment::file(&File::open(file_name.clone()).await.unwrap(),&file_name).await.unwrap();
+            let message1 = serenity::builder::CreateMessage::default().content("Here is your image").add_file(attachment);
+            _ =  msg.channel_id.send_message(&ctx.http, message1).await;
+
+            println!("file sent successfully");
+        },
+        Err(message) => {
+            _ = msg.reply(&ctx.http, &message).await;
+            println!("failed to reply.");
+            },
+    }
+    Ok(())
+}
+
+
+
+async fn download_image(url: &str, file_name: &str)-> Result<bool, String>{
+    let response_head = match reqwest::Client::new().head(url).send().await {
+        Ok(response_head1)=>  response_head1,
+        Err(err) => {
+            println!("error : {}", err);
+            return Err(String::from("failure in head request"));
+        }
+    };
+    if response_head.status().is_success() {
+        println!("1");
+        if let Some(content_type) = response_head.headers().get(CONTENT_TYPE) {
+            println!("2");
+            if let Ok(content_type_str) = content_type.to_str(){
+                println!("3");
+                if content_type_str.starts_with("image/"){
+                    println!("4");
+                    if let Ok(response) = reqwest::get(url).await{
+                        println!("5");
+                        if response.status().is_success(){
+                            println!("6");
+                            //println!("{}",response.text().await.unwrap());
+                            let image_bytes = response.bytes().await;
+                            let image = image::load_from_memory(image_bytes.as_ref().unwrap()).unwrap();
+                            let bytes_slice: &[u8] = &(image_bytes.unwrap());
+                            if ImageReader::new(std::io::Cursor::new(bytes_slice)).with_guessed_format().is_ok(){
+                                println!("7");
+                               
+                                let current_dir = env::current_dir().expect("Failed to get current directory");
+                                let file_path = current_dir.join(file_name);
+                                if let Some(path_str) = file_path.to_str() {
+                                    let res = image.save(Path::new(&path_str));
+                                    match res {
+                                        Ok(result)=> println!("successfully saved image"),
+                                        Err(err)=> println!("error occured while saving image : {}", err)
+                                    }
+                                    println!("file saved to {}", &path_str);
+                                    return Ok(true);
+                                } else {
+                                    println!("Invalid file path");
+                                }
+
+                                /*if let Ok(mut file) = File::create(file_name).await {
+                                    if let Ok(_) = file.write_all(bytes_slice).await {
+                                        println!("Image downloaded to {} successfully", file_name);
+                                        return Ok(true);
+                                    }
+                                    }
+
+                                 */
+                            }
+                        }
+                        return Err(String::from("Main request failed to fetch response!"));
+                    }
+                }
+                return Err(String::from("Content is not image"));
+            }
+            return Err(String::from("failed to turn content type into str"));
+        }
+        return Err(String::from("failed to fetch content type from head request"));
+    }
+    return Err(String::from("Head response failed"));
+}
+
