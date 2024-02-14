@@ -16,12 +16,12 @@ Each time a new member joins the server, depending on how they were invited, the
 
 The bot supports the following commands:
 
-- `**~commands`  :** Shows the number of times members have attempted to use each command.
-- **`~help [optional:command_name]`**: Provides a guide for using the bot and sending out commands.
-- `**~about**` : Upon calling this command, the bot will send a custom message set by the admin. The admin can customize this message and put information about the server and channels, server guidelines or additional information.
-- `**~update_about [new_about]**` : Admins can call this command to change the text that is shown when members call the ~about command. Only members with the role named  “admin” can call this command.
-- `**~remove_member [Username] [optional:reason]**` : Admins can call this command to call for immediate removal of a member from the server and possibly provide a reason for their action. The member with the specified username will be kicked by the bot. Only members with the role named “admin” can call this command.
-- `**~get_image [url]` *(coming soon)*** : Members can provide the bot with a URL for an image and receive the file for that image in the channel.
+- `~commands` : Shows the number of times members have attempted to use each command.
+- `~help [optional:command_name]`: Provides a guide for using the bot and sending out commands.
+- `~about` : Upon calling this command, the bot will send a custom message set by the admin. The admin can customize this message and put information about the server and channels, server guidelines or additional information.
+- `~update_about [new_about]` : Admins can call this command to change the text that is shown when members call the ~about command. Only members with the role named  “admin” can call this command.
+- `~remove_member [Username] [optional:reason]` : Admins can call this command to call for immediate removal of a member from the server and possibly provide a reason for their action. The member with the specified username will be kicked by the bot. Only members with the role named “admin” can call this command.
+- `~get_image [url]` *(coming soon)* : Members can provide the bot with a URL for an image and receive the file for that image in the channel.
 
 ## Setting up the bot
 
